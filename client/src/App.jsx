@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-// Uses the same host that served the Vite page, on backend port 5000.
-// Example: http://localhost:5173 -> http://localhost:5000
-//         http://192.168.x.x:5173 -> http://192.168.x.x:5000
-const API_URL = `${window.location.protocol}//${window.location.hostname}:5000`;
+// Deployed ResQLink backend on Render.
+// For local development, set VITE_API_URL in client/.env.local if needed.
+const API_URL = import.meta.env.VITE_API_URL || "https://resqlink-m2ge.onrender.com";
 
 function buildEcgPath(samples) {
   if (!Array.isArray(samples) || samples.length < 2) return "";
