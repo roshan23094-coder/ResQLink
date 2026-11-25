@@ -1,11 +1,11 @@
-const express = require("express");
+﻿const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 
 const app = express();
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // =====================================================
 // PATIENT DIGITAL RECORDS (PROTOTYPE JSON STORAGE)
@@ -109,7 +109,7 @@ app.use(express.json());
 
 
 // =====================================================
-// HELPER — CALCULATE DISTANCE BETWEEN GPS LOCATIONS
+// HELPER â€” CALCULATE DISTANCE BETWEEN GPS LOCATIONS
 // =====================================================
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -404,7 +404,7 @@ app.get("/", (req, res) => {
   res.json({
 
     message:
-      "🚑 Smart Ambulance Server is running",
+      "ðŸš‘ Smart Ambulance Server is running",
 
     status:
       "ONLINE",
@@ -437,7 +437,7 @@ app.get(
 
 
 // =====================================================
-// REQUESTER LOCATION (BROWSER GPS) — SEPARATE FROM AMBULANCE GPS
+// REQUESTER LOCATION (BROWSER GPS) â€” SEPARATE FROM AMBULANCE GPS
 // =====================================================
 
 let requesterLocation = null;
@@ -517,7 +517,7 @@ app.post(
     );
 
     console.log(
-      "🚨 NEW PUBLIC AMBULANCE REQUEST"
+      "ðŸš¨ NEW PUBLIC AMBULANCE REQUEST"
     );
 
     console.log(
@@ -620,7 +620,7 @@ app.post(
     ) {
 
       console.log(
-        "❌ No available ambulance"
+        "âŒ No available ambulance"
       );
 
       return res.status(503).json({
@@ -858,12 +858,12 @@ app.post(
     );
 
     console.log(
-      "🚑 SELECTED:",
+      "ðŸš‘ SELECTED:",
       selectedAmbulance.ambulanceId
     );
 
     console.log(
-      "📏 Distance:",
+      "ðŸ“ Distance:",
       selectedAmbulance.distance,
       "km"
     );
@@ -1088,7 +1088,7 @@ app.post(
     );
 
     console.log(
-      "✅ AMBULANCE REQUEST ACCEPTED"
+      "âœ… AMBULANCE REQUEST ACCEPTED"
     );
 
     console.log(
@@ -1204,7 +1204,7 @@ app.post(
 
 
     console.log(
-      `🚑 ${ambulanceId} STATUS → ${status}`
+      `ðŸš‘ ${ambulanceId} STATUS â†’ ${status}`
     );
 
 
@@ -1329,7 +1329,7 @@ app.post(
 
 
 // =====================================================
-// ESP32 → NODE.JS
+// ESP32 â†’ NODE.JS
 // RECEIVE SENSOR DATA
 // =====================================================
 
@@ -1344,7 +1344,7 @@ app.post(
     );
 
     console.log(
-      "📡 DATA RECEIVED FROM ESP32"
+      "ðŸ“¡ DATA RECEIVED FROM ESP32"
     );
 
     console.log(
@@ -1542,11 +1542,11 @@ app.post(
 
 
         console.log(
-          "🚨 EMERGENCY RECEIVED"
+          "ðŸš¨ EMERGENCY RECEIVED"
         );
 
         console.log(
-          "🚑 Inter-ambulance assistance requested"
+          "ðŸš‘ Inter-ambulance assistance requested"
         );
 
       }
@@ -1679,7 +1679,7 @@ app.post(
     console.log(
       "Temperature:",
       ambulanceData.temperature,
-      "°C"
+      "Â°C"
     );
 
     console.log(
@@ -1821,7 +1821,7 @@ app.post(
 
 
 // =====================================================
-// NEAREST REAL HOSPITAL — REQUIRES VALID ESP32 GPS FIX
+// NEAREST REAL HOSPITAL â€” REQUIRES VALID ESP32 GPS FIX
 // =====================================================
 
 app.get("/api/nearby-hospitals", async (req, res) => {
@@ -1921,7 +1921,7 @@ app.get("/api/nearest-hospital", async (req, res) => {
 
 
 // =====================================================
-// BEST ROUTE — REAL ROAD ROUTE TO NEAREST OSM HOSPITAL
+// BEST ROUTE â€” REAL ROAD ROUTE TO NEAREST OSM HOSPITAL
 // =====================================================
 
 app.get("/api/best-route", async (req, res) => {
@@ -2005,7 +2005,7 @@ app.get("/api/best-route", async (req, res) => {
 
 
 // =====================================================
-// HOSPITAL MANAGEMENT — HYBRID PROTOTYPE DATA
+// HOSPITAL MANAGEMENT â€” HYBRID PROTOTYPE DATA
 // Real hospital identity/location comes from OpenStreetMap.
 // Bed counts, facilities and acceptance are manually managed
 // prototype values and are NOT verified live hospital capacity.
@@ -2208,11 +2208,11 @@ app.post(
     );
 
     console.log(
-      "🚨🚨 EMERGENCY ACTIVATED 🚨🚨"
+      "ðŸš¨ðŸš¨ EMERGENCY ACTIVATED ðŸš¨ðŸš¨"
     );
 
     console.log(
-      "🚑 Ambulance A-01 requires assistance"
+      "ðŸš‘ Ambulance A-01 requires assistance"
     );
 
     console.log(
@@ -2251,7 +2251,7 @@ app.post(
 
 
     console.log(
-      "🚑 Ambulance A-02 ACCEPTED assistance request"
+      "ðŸš‘ Ambulance A-02 ACCEPTED assistance request"
     );
 
 
@@ -2284,7 +2284,7 @@ app.post(
 
 
     console.log(
-      "❌ Ambulance A-02 DECLINED assistance request"
+      "âŒ Ambulance A-02 DECLINED assistance request"
     );
 
 
@@ -2426,7 +2426,7 @@ app.post(
     console.log();
 
     console.log(
-      "↩ EMERGENCY SYSTEM RESET"
+      "â†© EMERGENCY SYSTEM RESET"
     );
 
 
@@ -2469,7 +2469,7 @@ app.post("/api/patients", (req, res) => {
   try {
     const id = String(req.body.id || `P${Date.now().toString().slice(-7)}`).trim().toUpperCase();
     if (!/^[A-Z0-9-]{3,24}$/.test(id)) {
-      return res.status(400).json({ success: false, message: "Patient ID must be 3–24 letters, numbers or hyphens." });
+      return res.status(400).json({ success: false, message: "Patient ID must be 3â€“24 letters, numbers or hyphens." });
     }
     if (patientRecords.some(p => p.id.toUpperCase() === id)) {
       return res.status(409).json({ success: false, message: "Patient ID already exists." });
@@ -2565,17 +2565,17 @@ function addEmergencyEvent(type, details = {}) {
 app.get("/api/clinical/risk-assessment", (req, res) => {
   const findings = [];
   if (ambulanceData.heartRateValid) {
-    if (ambulanceData.heartRate < 50 || ambulanceData.heartRate > 120) findings.push({ metric: "Heart rate", value: ambulanceData.heartRate, reason: "Outside the prototype review range (50–120 bpm)." });
+    if (ambulanceData.heartRate < 50 || ambulanceData.heartRate > 120) findings.push({ metric: "Heart rate", value: ambulanceData.heartRate, reason: "Outside the prototype review range (50â€“120 bpm)." });
   } else findings.push({ metric: "Heart rate", value: null, reason: "No valid heart-rate reading available." });
   if (ambulanceData.spo2Valid) {
-    if (ambulanceData.spo2 < 92) findings.push({ metric: "SpO₂", value: ambulanceData.spo2, reason: "Below the prototype review threshold of 92%." });
-  } else findings.push({ metric: "SpO₂", value: null, reason: "No valid SpO₂ reading available." });
+    if (ambulanceData.spo2 < 92) findings.push({ metric: "SpOâ‚‚", value: ambulanceData.spo2, reason: "Below the prototype review threshold of 92%." });
+  } else findings.push({ metric: "SpOâ‚‚", value: null, reason: "No valid SpOâ‚‚ reading available." });
   const temp = Number(ambulanceData.temperature);
   if (Number.isFinite(temp) && temp > 0) {
-    if (temp >= 38.5) findings.push({ metric: "Temperature", value: temp, reason: "At or above the prototype review threshold of 38.5°C." });
+    if (temp >= 38.5) findings.push({ metric: "Temperature", value: temp, reason: "At or above the prototype review threshold of 38.5Â°C." });
   } else findings.push({ metric: "Temperature", value: null, reason: "No temperature reading available." });
   if (ambulanceData.ecgLeadOff || !ambulanceData.ecgSamples?.length) findings.push({ metric: "ECG", value: null, reason: "ECG leads/samples are not currently suitable for review." });
-  const concerning = findings.some(f => f.value !== null && ((f.metric === "SpO₂" && f.value < 92) || (f.metric === "Heart rate" && (f.value < 50 || f.value > 120)) || (f.metric === "Temperature" && f.value >= 38.5)));
+  const concerning = findings.some(f => f.value !== null && ((f.metric === "SpOâ‚‚" && f.value < 92) || (f.metric === "Heart rate" && (f.value < 50 || f.value > 120)) || (f.metric === "Temperature" && f.value >= 38.5)));
   res.json({
     success: true,
     assessment: concerning ? "REVIEW_REQUIRED" : "NO_RULE_TRIGGERED",
@@ -2732,7 +2732,7 @@ app.listen(
     );
 
     console.log(
-      "🚑 SMART AMBULANCE SERVER"
+      "ðŸš‘ SMART AMBULANCE SERVER"
     );
 
     console.log(
@@ -2746,7 +2746,7 @@ app.listen(
     console.log();
 
     console.log(
-      "🚑 Ambulances:"
+      "ðŸš‘ Ambulances:"
     );
 
 
@@ -2755,7 +2755,7 @@ app.listen(
 
         console.log(
 
-          `${ambulance.ambulanceId} → ${ambulance.status} → ${ambulance.latitude}, ${ambulance.longitude}`
+          `${ambulance.ambulanceId} â†’ ${ambulance.status} â†’ ${ambulance.latitude}, ${ambulance.longitude}`
 
         );
 
@@ -2766,7 +2766,7 @@ app.listen(
     console.log();
 
     console.log(
-      "📡 ESP32 endpoint:"
+      "ðŸ“¡ ESP32 endpoint:"
     );
 
     console.log(
@@ -2777,7 +2777,7 @@ app.listen(
     console.log();
 
     console.log(
-      "🚨 Public ambulance request:"
+      "ðŸš¨ Public ambulance request:"
     );
 
     console.log(
@@ -2788,7 +2788,7 @@ app.listen(
     console.log();
 
     console.log(
-      "🚑 All ambulances:"
+      "ðŸš‘ All ambulances:"
     );
 
     console.log(
@@ -2799,7 +2799,7 @@ app.listen(
     console.log();
 
     console.log(
-      "🏥 Best route:"
+      "ðŸ¥ Best route:"
     );
 
     console.log(
