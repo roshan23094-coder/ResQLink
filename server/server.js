@@ -1,11 +1,12 @@
-﻿const express = require("express");
+const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const app = express();
 
-const PORT = process.env.PORT || 5000;
+const PORT = 5000;
 
 // =====================================================
 // PATIENT DIGITAL RECORDS (PROTOTYPE JSON STORAGE)
@@ -46,6 +47,10 @@ const seedPatients = [
     rfidUid: "87 C8 FA 2E", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), emergencyRecords: []
   }
 ];
+
+function normalizeRFIDUid(value) {
+  return String(value ?? "").trim().toUpperCase().replace(/[^A-F0-9]/g, "");
+}
 
 function readPatientRecords() {
   try {
@@ -93,7 +98,9 @@ function normalizePatient(body, existing = {}) {
     medicalHistory: String(body.medicalHistory ?? existing.medicalHistory ?? "").trim(),
     emergencyContact: String(body.emergencyContact ?? existing.emergencyContact ?? "").trim(),
     notes: String(body.notes ?? existing.notes ?? "").trim(),
-    rfidUid: String(body.rfidUid ?? existing.rfidUid ?? "").trim().toUpperCase(),
+    rfidUid: String(body.rfidUid ?? existing.rfidUid ?? "").trim().toUpperCase()
+      .replace(/[^A-F0-9]/g, "")
+      .match(/.{1,2}/g)?.join(" ") || "",
     updatedAt: new Date().toISOString()
   };
 }
@@ -107,9 +114,50 @@ function normalizePatient(body, existing = {}) {
 app.use(cors());
 app.use(express.json());
 
+// =====================================================
+// ADMIN AUTHENTICATION (PROTOTYPE SESSION TOKENS)
+// Set ADMIN_USERNAME and ADMIN_PASSWORD in the server environment.
+// =====================================================
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ResQLink@2026";
+const adminSessions = new Map();
+const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+
+function requireAdmin(req, res, next) {
+  const authorization = String(req.headers.authorization || "");
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  const session = token ? adminSessions.get(token) : null;
+  if (!session || session.expiresAt < Date.now()) {
+    if (token) adminSessions.delete(token);
+    return res.status(401).json({ success: false, code: "ADMIN_AUTH_REQUIRED", message: "Admin login required." });
+  }
+  session.expiresAt = Date.now() + ADMIN_SESSION_TTL_MS;
+  return next();
+}
+
+app.post("/api/admin/login", (req, res) => {
+  const username = String(req.body.username || "");
+  const password = String(req.body.password || "");
+  const usernameOk = username === ADMIN_USERNAME;
+  const passwordOk = password === ADMIN_PASSWORD;
+  if (!usernameOk || !passwordOk) {
+    return res.status(401).json({ success: false, message: "Incorrect admin username or password." });
+  }
+  const token = crypto.randomBytes(32).toString("hex");
+  adminSessions.set(token, { expiresAt: Date.now() + ADMIN_SESSION_TTL_MS });
+  return res.json({ success: true, token, expiresIn: ADMIN_SESSION_TTL_MS });
+});
+
+app.post("/api/admin/logout", requireAdmin, (req, res) => {
+  const token = String(req.headers.authorization || "").slice(7);
+  adminSessions.delete(token);
+  return res.json({ success: true });
+});
+
+
 
 // =====================================================
-// HELPER â€” CALCULATE DISTANCE BETWEEN GPS LOCATIONS
+// HELPER — CALCULATE DISTANCE BETWEEN GPS LOCATIONS
 // =====================================================
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -267,90 +315,117 @@ const demoPatient = {
 // No demo hospital names, fabricated bed counts or traffic values.
 // =====================================================
 
-let hospitalCache = { at: 0, items: [] };
+let hospitalCache = { at: 0, latitude: null, longitude: null, items: [] };
 const HOSPITAL_CACHE_MS = 60_000;
 
-async function discoverNearbyHospitals(latitude, longitude, radius = 15000) {
-  if (
-    hospitalCache.items.length &&
-    Date.now() - hospitalCache.at < HOSPITAL_CACHE_MS
-  ) {
+async function discoverNearbyHospitals(latitude, longitude, radius = 20000) {
+  const validLat = Number(latitude);
+  const validLon = Number(longitude);
+  if (!Number.isFinite(validLat) || !Number.isFinite(validLon)) {
+    throw new Error("Valid GPS coordinates are required for hospital discovery.");
+  }
+
+  // Reuse cached results only when the ambulance is still close to the cache centre.
+  const cacheIsNearby = Number.isFinite(hospitalCache.latitude) &&
+    Number.isFinite(hospitalCache.longitude) &&
+    calculateDistance(validLat, validLon, hospitalCache.latitude, hospitalCache.longitude) <= 2;
+
+  if (hospitalCache.items.length && cacheIsNearby &&
+      Date.now() - hospitalCache.at < HOSPITAL_CACHE_MS) {
     return hospitalCache.items.map(h => ({
       ...h,
       straightLineDistance: Number(
-        calculateDistance(latitude, longitude, h.latitude, h.longitude).toFixed(2)
+        calculateDistance(validLat, validLon, h.latitude, h.longitude).toFixed(2)
       )
     })).sort((a, b) => a.straightLineDistance - b.straightLineDistance);
   }
 
   const query = `
-    [out:json][timeout:20];
+    [out:json][timeout:25];
     (
-      node["amenity"="hospital"](around:${radius},${latitude},${longitude});
-      way["amenity"="hospital"](around:${radius},${latitude},${longitude});
-      relation["amenity"="hospital"](around:${radius},${latitude},${longitude});
-      node["healthcare"="hospital"](around:${radius},${latitude},${longitude});
-      way["healthcare"="hospital"](around:${radius},${latitude},${longitude});
-      relation["healthcare"="hospital"](around:${radius},${latitude},${longitude});
+      node["amenity"="hospital"](around:${radius},${validLat},${validLon});
+      way["amenity"="hospital"](around:${radius},${validLat},${validLon});
+      relation["amenity"="hospital"](around:${radius},${validLat},${validLon});
+      node["healthcare"="hospital"](around:${radius},${validLat},${validLon});
+      way["healthcare"="hospital"](around:${radius},${validLat},${validLon});
+      relation["healthcare"="hospital"](around:${radius},${validLat},${validLon});
+      node["amenity"="clinic"](around:${radius},${validLat},${validLon});
+      way["amenity"="clinic"](around:${radius},${validLat},${validLon});
     );
     out center tags;
   `;
 
-  const response = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      "User-Agent": "ResQLink-Educational-Prototype/1.0"
-    },
-    body: new URLSearchParams({ data: query }),
-    signal: AbortSignal.timeout(25000)
-  });
+  // Public Overpass instances occasionally rate-limit or time out. Try mirrors in order.
+  const endpoints = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.nchc.org.tw/api/interpreter"
+  ];
 
-  if (!response.ok) {
-    throw new Error(`OpenStreetMap hospital lookup failed (${response.status})`);
+  let payload = null;
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json",
+          "User-Agent": "ResQLink/1.0"
+        },
+        body: new URLSearchParams({ data: query }),
+        signal: AbortSignal.timeout(45000)
+      });
+      if (!response.ok) throw new Error(`${endpoint} returned ${response.status}`);
+      payload = await response.json();
+      break;
+    } catch (error) {
+      lastError = error;
+      console.warn("Hospital data provider unavailable:", endpoint, error.message);
+    }
+  }
+  if (!payload) {
+    throw new Error(`All OpenStreetMap hospital providers failed. ${lastError?.message || ""}`);
   }
 
-  const payload = await response.json();
   const unique = new Map();
-
   for (const element of payload.elements || []) {
     const tags = element.tags || {};
     const lat = Number(element.lat ?? element.center?.lat);
     const lon = Number(element.lon ?? element.center?.lon);
     const name = String(tags.name || tags["name:en"] || "").trim();
-
     if (!name || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    const distance = calculateDistance(validLat, validLon, lat, lon);
+    if (distance > radius / 1000 + 1) continue;
 
     const key = `${name.toLowerCase()}|${lat.toFixed(5)}|${lon.toFixed(5)}`;
     if (unique.has(key)) continue;
-
     unique.set(key, {
       id: `${element.type}/${element.id}`,
       name,
       latitude: lat,
       longitude: lon,
       address: [
-        tags["addr:street"],
-        tags["addr:suburb"],
-        tags["addr:city"]
+        tags["addr:street"], tags["addr:suburb"],
+        tags["addr:city"] || tags["addr:town"] || tags["addr:village"]
       ].filter(Boolean).join(", "),
       phone: tags.phone || tags["contact:phone"] || null,
       website: tags.website || tags["contact:website"] || null,
+      facilityType: tags.amenity === "clinic" ? "Clinic" : "Hospital",
       source: "OpenStreetMap"
     });
   }
 
   const hospitalRecords = [...unique.values()];
-
   hospitalCache = {
-    at: Date.now(),
-    items: hospitalRecords
+    at: Date.now(), latitude: validLat, longitude: validLon, items: hospitalRecords
   };
 
   return hospitalRecords.map(h => ({
     ...h,
     straightLineDistance: Number(
-      calculateDistance(latitude, longitude, h.latitude, h.longitude).toFixed(2)
+      calculateDistance(validLat, validLon, h.latitude, h.longitude).toFixed(2)
     )
   })).sort((a, b) => a.straightLineDistance - b.straightLineDistance);
 }
@@ -404,7 +479,7 @@ app.get("/", (req, res) => {
   res.json({
 
     message:
-      "ðŸš‘ Smart Ambulance Server is running",
+      "🚑 Smart Ambulance Server is running",
 
     status:
       "ONLINE",
@@ -437,7 +512,7 @@ app.get(
 
 
 // =====================================================
-// REQUESTER LOCATION (BROWSER GPS) â€” SEPARATE FROM AMBULANCE GPS
+// REQUESTER LOCATION (BROWSER GPS) — SEPARATE FROM AMBULANCE GPS
 // =====================================================
 
 let requesterLocation = null;
@@ -517,7 +592,7 @@ app.post(
     );
 
     console.log(
-      "ðŸš¨ NEW PUBLIC AMBULANCE REQUEST"
+      "🚨 NEW PUBLIC AMBULANCE REQUEST"
     );
 
     console.log(
@@ -620,7 +695,7 @@ app.post(
     ) {
 
       console.log(
-        "âŒ No available ambulance"
+        "❌ No available ambulance"
       );
 
       return res.status(503).json({
@@ -858,12 +933,12 @@ app.post(
     );
 
     console.log(
-      "ðŸš‘ SELECTED:",
+      "🚑 SELECTED:",
       selectedAmbulance.ambulanceId
     );
 
     console.log(
-      "ðŸ“ Distance:",
+      "📏 Distance:",
       selectedAmbulance.distance,
       "km"
     );
@@ -926,6 +1001,7 @@ app.post(
 
 app.get(
   "/api/ambulance/requests",
+  requireAdmin,
   (req, res) => {
 
     res.json({
@@ -992,6 +1068,7 @@ app.get(
 
 app.post(
   "/api/ambulance/request/accept",
+  requireAdmin,
   (req, res) => {
 
     const {
@@ -1088,7 +1165,7 @@ app.post(
     );
 
     console.log(
-      "âœ… AMBULANCE REQUEST ACCEPTED"
+      "✅ AMBULANCE REQUEST ACCEPTED"
     );
 
     console.log(
@@ -1204,7 +1281,7 @@ app.post(
 
 
     console.log(
-      `ðŸš‘ ${ambulanceId} STATUS â†’ ${status}`
+      `🚑 ${ambulanceId} STATUS → ${status}`
     );
 
 
@@ -1329,7 +1406,7 @@ app.post(
 
 
 // =====================================================
-// ESP32 â†’ NODE.JS
+// ESP32 → NODE.JS
 // RECEIVE SENSOR DATA
 // =====================================================
 
@@ -1344,7 +1421,7 @@ app.post(
     );
 
     console.log(
-      "ðŸ“¡ DATA RECEIVED FROM ESP32"
+      "📡 DATA RECEIVED FROM ESP32"
     );
 
     console.log(
@@ -1542,11 +1619,11 @@ app.post(
 
 
         console.log(
-          "ðŸš¨ EMERGENCY RECEIVED"
+          "🚨 EMERGENCY RECEIVED"
         );
 
         console.log(
-          "ðŸš‘ Inter-ambulance assistance requested"
+          "🚑 Inter-ambulance assistance requested"
         );
 
       }
@@ -1566,17 +1643,38 @@ app.post(
     // Accept the UID whenever it is present; this also supports older firmware
     // that may not send rfidDetected as a separate boolean.
     if (incomingRFID) {
-      ambulanceData.patientId = incomingRFID.trim().toUpperCase();
-      ambulanceData.rfidStatus = "IDENTIFIED";
+      const formattedUid = String(incomingRFID).trim().toUpperCase()
+        .replace(/[^A-F0-9]/g, "")
+        .match(/.{1,2}/g)?.join(" ") || "";
+      ambulanceData.rfidUid = formattedUid;
+      ambulanceData.rfidStatus = "SCANNED";
       ambulanceData.rfidDetected = true;
       ambulanceData.rfidLastUpdated = new Date().toISOString();
-      console.log("RFID UID ACCEPTED FROM ESP32:", ambulanceData.patientId);
+
+      const matchedPatient = patientRecords.find(patient =>
+        normalizeRFIDUid(patient.rfidUid) === normalizeRFIDUid(formattedUid)
+      );
+      if (matchedPatient) {
+        ambulanceData.rfidStatus = "IDENTIFIED";
+        ambulanceData.patientId = matchedPatient.id;
+        ambulanceData.patientName = matchedPatient.name;
+        ambulanceData.patientAge = matchedPatient.age;
+        ambulanceData.patientBloodGroup = matchedPatient.bloodGroup;
+      } else {
+        ambulanceData.patientId = null;
+        ambulanceData.patientName = null;
+        ambulanceData.patientAge = null;
+        ambulanceData.patientBloodGroup = null;
+      }
+      console.log("RFID UID RECEIVED FROM ESP32:", formattedUid);
+      console.log("RFID MATCH:", matchedPatient ? matchedPatient.id : "UNKNOWN CARD");
     } else if (
       data.rfidStatus === "NOT_SCANNED" ||
       data.rfidDetected === false
     ) {
       ambulanceData.rfidStatus = "NOT_SCANNED";
       ambulanceData.rfidDetected = false;
+      ambulanceData.rfidUid = null;
       ambulanceData.patientId = null;
       ambulanceData.patientName = null;
       ambulanceData.patientAge = null;
@@ -1679,7 +1777,7 @@ app.post(
     console.log(
       "Temperature:",
       ambulanceData.temperature,
-      "Â°C"
+      "°C"
     );
 
     console.log(
@@ -1733,7 +1831,7 @@ app.post(
 // =====================================================
 // REJECT AMBULANCE REQUEST (ADMIN PORTAL)
 // =====================================================
-app.post("/api/ambulance/request/reject", (req, res) => {
+app.post("/api/ambulance/request/reject", requireAdmin, (req, res) => {
   const requestId = String(req.body?.requestId || "");
   if (!requestId) return res.status(400).json({ success: false, message: "Request ID is required." });
   const request = ambulanceRequests.find(item => item.requestId === requestId);
@@ -1754,74 +1852,86 @@ app.post("/api/ambulance/request/reject", (req, res) => {
 // RFID SCAN
 // =====================================================
 
-app.get("/api/rfid/scans", (req, res) => {
+app.get("/api/rfid/scans", requireAdmin, (req, res) => {
   res.json({ success: true, count: rfidScanHistory.length, scans: rfidScanHistory });
 });
 
-app.post(
-  "/api/rfid/scan",
-  (req, res) => {
-    const requestedUid = String(
-      req.body?.uid || req.body?.rfidUid ||
-      (ambulanceData.rfidDetected ? ambulanceData.patientId : "") || ""
-    ).trim().toUpperCase();
+app.post("/api/rfid/scan", (req, res) => {
+  const suppliedUid = req.body?.uid || req.body?.rfidUid || ambulanceData.rfidUid || "";
+  const requestedUid = String(suppliedUid).trim().toUpperCase()
+    .replace(/[^A-F0-9]/g, "")
+    .match(/.{1,2}/g)?.join(" ") || "";
 
-    if (!requestedUid) {
-      rfidScanHistory.push({ uid: null, status: "NOT_SCANNED", patient: null, scannedAt: new Date().toISOString() });
-      rfidScanHistory = rfidScanHistory.slice(-100);
-      return res.status(409).json({
-        success: false,
-        code: "RFID_NOT_SCANNED",
-        message: "No RFID UID received yet. Scan a card or choose manual registration.",
-        rfid: { status: "NOT_SCANNED", uid: null }
-      });
-    }
-
-    const record = patientRecords.find(p =>
-      String(p.rfidUid || "").toUpperCase() === requestedUid ||
-      String(p.id || "").toUpperCase() === requestedUid
-    );
-
-    if (!record) {
-      rfidScanHistory.push({ uid: requestedUid, status: "UNKNOWN_CARD", patient: null, scannedAt: new Date().toISOString() });
-      rfidScanHistory = rfidScanHistory.slice(-100);
-      ambulanceData.rfidStatus = "UNKNOWN_CARD";
-      ambulanceData.rfidDetected = true;
-      ambulanceData.patientId = requestedUid;
-      return res.status(404).json({
-        success: false,
-        message: "Unrecognized RFID card. ResQLink uses only the four pre-assigned registered-patient cards. For patients without a registered card, use Manual Registration; no new RFID card will be issued.",
-        rfid: { status: "UNKNOWN_CARD", uid: requestedUid }
-      });
-    }
-
+  if (!requestedUid) {
     rfidScanHistory.push({
-      uid: requestedUid,
-      status: "IDENTIFIED",
-      patient: {
-        id: record.id, name: record.name, age: record.age,
-        bloodGroup: record.bloodGroup, phone: record.phone,
-        allergies: record.allergies, medicalHistory: record.medicalHistory,
-        emergencyContact: record.emergencyContact
-      },
+      uid: null, status: "NOT_SCANNED", patient: null,
       scannedAt: new Date().toISOString()
     });
     rfidScanHistory = rfidScanHistory.slice(-100);
-    ambulanceData.rfidStatus = "IDENTIFIED";
-    ambulanceData.rfidDetected = true;
-    ambulanceData.rfidLastUpdated = new Date().toISOString();
-    ambulanceData.patientId = record.id;
-    ambulanceData.patientName = record.name;
-    ambulanceData.patientAge = record.age;
-    ambulanceData.patientBloodGroup = record.bloodGroup;
-
-    res.json({ success: true, patient: record, rfid: { status: "IDENTIFIED", uid: requestedUid }, message: "Patient record retrieved." });
+    return res.status(409).json({
+      success: false,
+      code: "RFID_NOT_SCANNED",
+      message: "No RFID UID received yet. Scan a card or choose manual registration.",
+      rfid: { status: "NOT_SCANNED", uid: null }
+    });
   }
-);
 
+  const record = patientRecords.find(patient =>
+    normalizeRFIDUid(patient.rfidUid) === normalizeRFIDUid(requestedUid)
+  );
+
+  if (!record) {
+    ambulanceData.rfidUid = requestedUid;
+    ambulanceData.rfidStatus = "UNKNOWN_CARD";
+    ambulanceData.rfidDetected = true;
+    ambulanceData.patientId = null;
+    ambulanceData.patientName = null;
+    ambulanceData.patientAge = null;
+    ambulanceData.patientBloodGroup = null;
+    rfidScanHistory.push({
+      uid: requestedUid, status: "UNKNOWN_CARD", patient: null,
+      scannedAt: new Date().toISOString()
+    });
+    rfidScanHistory = rfidScanHistory.slice(-100);
+    return res.status(404).json({
+      success: false,
+      code: "UNKNOWN_CARD",
+      message: "This RFID card is not linked to a patient. The UID is ready to be saved with a new patient registration.",
+      rfid: { status: "UNKNOWN_CARD", uid: requestedUid }
+    });
+  }
+
+  const patientResponse = {
+    id: record.id, name: record.name, age: record.age,
+    bloodGroup: record.bloodGroup, phone: record.phone,
+    allergies: record.allergies, medicalHistory: record.medicalHistory,
+    emergencyContact: record.emergencyContact, notes: record.notes,
+    rfidUid: record.rfidUid, emergencyRecords: record.emergencyRecords || []
+  };
+  rfidScanHistory.push({
+    uid: requestedUid, status: "IDENTIFIED",
+    patient: patientResponse, scannedAt: new Date().toISOString()
+  });
+  rfidScanHistory = rfidScanHistory.slice(-100);
+
+  ambulanceData.rfidUid = requestedUid;
+  ambulanceData.rfidStatus = "IDENTIFIED";
+  ambulanceData.rfidDetected = true;
+  ambulanceData.rfidLastUpdated = new Date().toISOString();
+  ambulanceData.patientId = record.id;
+  ambulanceData.patientName = record.name;
+  ambulanceData.patientAge = record.age;
+  ambulanceData.patientBloodGroup = record.bloodGroup;
+
+  return res.json({
+    success: true, patient: { ...record },
+    rfid: { status: "IDENTIFIED", uid: requestedUid },
+    message: "Patient record retrieved."
+  });
+});
 
 // =====================================================
-// NEAREST REAL HOSPITAL â€” REQUIRES VALID ESP32 GPS FIX
+// NEAREST REAL HOSPITAL — REQUIRES VALID ESP32 GPS FIX
 // =====================================================
 
 app.get("/api/nearby-hospitals", async (req, res) => {
@@ -1921,7 +2031,7 @@ app.get("/api/nearest-hospital", async (req, res) => {
 
 
 // =====================================================
-// BEST ROUTE â€” REAL ROAD ROUTE TO NEAREST OSM HOSPITAL
+// BEST ROUTE — REAL ROAD ROUTE TO NEAREST OSM HOSPITAL
 // =====================================================
 
 app.get("/api/best-route", async (req, res) => {
@@ -2005,7 +2115,7 @@ app.get("/api/best-route", async (req, res) => {
 
 
 // =====================================================
-// HOSPITAL MANAGEMENT â€” HYBRID PROTOTYPE DATA
+// HOSPITAL MANAGEMENT — HYBRID PROTOTYPE DATA
 // Real hospital identity/location comes from OpenStreetMap.
 // Bed counts, facilities and acceptance are manually managed
 // prototype values and are NOT verified live hospital capacity.
@@ -2053,7 +2163,7 @@ function validOptionalCount(value) {
     (Number.isInteger(Number(value)) && Number(value) >= 0);
 }
 
-app.get("/api/hospitals/management", async (req, res) => {
+app.get("/api/hospitals/management", requireAdmin, async (req, res) => {
   try {
     let discovered = [];
     const latitude = Number(req.query.latitude);
@@ -2103,7 +2213,7 @@ app.get("/api/hospitals/management", async (req, res) => {
   }
 });
 
-app.post("/api/hospitals/management", (req, res) => {
+app.post("/api/hospitals/management", requireAdmin, (req, res) => {
   const body = req.body || {};
   const id = String(body.id || "").trim();
   const name = String(body.name || "").trim();
@@ -2161,7 +2271,7 @@ app.post("/api/hospitals/management", (req, res) => {
   }
 });
 
-app.delete("/api/hospitals/management/:id", (req, res) => {
+app.delete("/api/hospitals/management/:id", requireAdmin, (req, res) => {
   const id = req.params.id;
   if (!managedHospitalData[id]) return res.status(404).json({ success: false, message: "Managed hospital record not found." });
   delete managedHospitalData[id];
@@ -2208,11 +2318,11 @@ app.post(
     );
 
     console.log(
-      "ðŸš¨ðŸš¨ EMERGENCY ACTIVATED ðŸš¨ðŸš¨"
+      "🚨🚨 EMERGENCY ACTIVATED 🚨🚨"
     );
 
     console.log(
-      "ðŸš‘ Ambulance A-01 requires assistance"
+      "🚑 Ambulance A-01 requires assistance"
     );
 
     console.log(
@@ -2251,7 +2361,7 @@ app.post(
 
 
     console.log(
-      "ðŸš‘ Ambulance A-02 ACCEPTED assistance request"
+      "🚑 Ambulance A-02 ACCEPTED assistance request"
     );
 
 
@@ -2284,7 +2394,7 @@ app.post(
 
 
     console.log(
-      "âŒ Ambulance A-02 DECLINED assistance request"
+      "❌ Ambulance A-02 DECLINED assistance request"
     );
 
 
@@ -2426,7 +2536,7 @@ app.post(
     console.log();
 
     console.log(
-      "â†© EMERGENCY SYSTEM RESET"
+      "↩ EMERGENCY SYSTEM RESET"
     );
 
 
@@ -2451,7 +2561,7 @@ app.post(
 // =====================================================
 // PATIENT DIGITAL MEDICAL RECORD API
 // =====================================================
-app.get("/api/patients", (req, res) => {
+app.get("/api/patients", requireAdmin, (req, res) => {
   const q = String(req.query.q || "").trim().toLowerCase();
   const results = patientRecords.filter(p =>
     !q || [p.id, p.name, p.bloodGroup, p.rfidUid].some(v => String(v || "").toLowerCase().includes(q))
@@ -2459,26 +2569,25 @@ app.get("/api/patients", (req, res) => {
   res.json({ success: true, count: results.length, patients: results });
 });
 
-app.get("/api/patients/:id", (req, res) => {
+app.get("/api/patients/:id", requireAdmin, (req, res) => {
   const patient = patientRecords.find(p => p.id.toLowerCase() === req.params.id.toLowerCase());
   if (!patient) return res.status(404).json({ success: false, message: "Patient not found." });
   res.json({ success: true, patient });
 });
 
-app.post("/api/patients", (req, res) => {
+app.post("/api/patients", requireAdmin, (req, res) => {
   try {
     const id = String(req.body.id || `P${Date.now().toString().slice(-7)}`).trim().toUpperCase();
     if (!/^[A-Z0-9-]{3,24}$/.test(id)) {
-      return res.status(400).json({ success: false, message: "Patient ID must be 3â€“24 letters, numbers or hyphens." });
+      return res.status(400).json({ success: false, message: "Patient ID must be 3–24 letters, numbers or hyphens." });
     }
     if (patientRecords.some(p => p.id.toUpperCase() === id)) {
       return res.status(409).json({ success: false, message: "Patient ID already exists." });
     }
     const normalized = normalizePatient(req.body);
-    if (normalized.rfidUid && (!Object.prototype.hasOwnProperty.call(DEMO_RFID_ASSIGNMENTS, normalized.rfidUid) || DEMO_RFID_ASSIGNMENTS[normalized.rfidUid] !== id)) {
-      return res.status(400).json({ success: false, message: "Only the four pre-assigned RFID cards can be linked, and each is reserved for its matching demo patient. Use manual registration without an RFID UID for unregistered patients." });
-    }
-    if (normalized.rfidUid && patientRecords.some(p => String(p.rfidUid || "").toUpperCase() === normalized.rfidUid)) {
+    if (normalized.rfidUid && patientRecords.some(p =>
+      normalizeRFIDUid(p.rfidUid) === normalizeRFIDUid(normalized.rfidUid)
+    )) {
       return res.status(409).json({ success: false, message: "This RFID card is already linked to another patient." });
     }
     const patient = { id, ...normalized, createdAt: new Date().toISOString(), emergencyRecords: [] };
@@ -2490,15 +2599,14 @@ app.post("/api/patients", (req, res) => {
   }
 });
 
-app.put("/api/patients/:id", (req, res) => {
+app.put("/api/patients/:id", requireAdmin, (req, res) => {
   try {
     const index = patientRecords.findIndex(p => p.id.toLowerCase() === req.params.id.toLowerCase());
     if (index < 0) return res.status(404).json({ success: false, message: "Patient not found." });
     const normalized = normalizePatient(req.body, patientRecords[index]);
-    if (normalized.rfidUid && (!Object.prototype.hasOwnProperty.call(DEMO_RFID_ASSIGNMENTS, normalized.rfidUid) || DEMO_RFID_ASSIGNMENTS[normalized.rfidUid] !== patientRecords[index].id)) {
-      return res.status(400).json({ success: false, message: "This patient can only retain their pre-assigned RFID card. Use manual registration for patients without RFID." });
-    }
-    if (normalized.rfidUid && patientRecords.some((p, i) => i !== index && String(p.rfidUid || "").toUpperCase() === normalized.rfidUid)) {
+    if (normalized.rfidUid && patientRecords.some((p, i) =>
+      i !== index && normalizeRFIDUid(p.rfidUid) === normalizeRFIDUid(normalized.rfidUid)
+    )) {
       return res.status(409).json({ success: false, message: "This RFID card is already linked to another patient." });
     }
     patientRecords[index] = normalized;
@@ -2509,7 +2617,7 @@ app.put("/api/patients/:id", (req, res) => {
   }
 });
 
-app.post("/api/patients/:id/emergency-records", (req, res) => {
+app.post("/api/patients/:id/emergency-records", requireAdmin, (req, res) => {
   const patient = patientRecords.find(p => p.id.toLowerCase() === req.params.id.toLowerCase());
   if (!patient) return res.status(404).json({ success: false, message: "Patient not found." });
   const record = {
@@ -2562,20 +2670,20 @@ function addEmergencyEvent(type, details = {}) {
 }
 
 // Explainable rule-based screening only. Not a diagnosis or validated clinical score.
-app.get("/api/clinical/risk-assessment", (req, res) => {
+app.get("/api/clinical/risk-assessment", requireAdmin, (req, res) => {
   const findings = [];
   if (ambulanceData.heartRateValid) {
-    if (ambulanceData.heartRate < 50 || ambulanceData.heartRate > 120) findings.push({ metric: "Heart rate", value: ambulanceData.heartRate, reason: "Outside the prototype review range (50â€“120 bpm)." });
+    if (ambulanceData.heartRate < 50 || ambulanceData.heartRate > 120) findings.push({ metric: "Heart rate", value: ambulanceData.heartRate, reason: "Outside the prototype review range (50–120 bpm)." });
   } else findings.push({ metric: "Heart rate", value: null, reason: "No valid heart-rate reading available." });
   if (ambulanceData.spo2Valid) {
-    if (ambulanceData.spo2 < 92) findings.push({ metric: "SpOâ‚‚", value: ambulanceData.spo2, reason: "Below the prototype review threshold of 92%." });
-  } else findings.push({ metric: "SpOâ‚‚", value: null, reason: "No valid SpOâ‚‚ reading available." });
+    if (ambulanceData.spo2 < 92) findings.push({ metric: "SpO₂", value: ambulanceData.spo2, reason: "Below the prototype review threshold of 92%." });
+  } else findings.push({ metric: "SpO₂", value: null, reason: "No valid SpO₂ reading available." });
   const temp = Number(ambulanceData.temperature);
   if (Number.isFinite(temp) && temp > 0) {
-    if (temp >= 38.5) findings.push({ metric: "Temperature", value: temp, reason: "At or above the prototype review threshold of 38.5Â°C." });
+    if (temp >= 38.5) findings.push({ metric: "Temperature", value: temp, reason: "At or above the prototype review threshold of 38.5°C." });
   } else findings.push({ metric: "Temperature", value: null, reason: "No temperature reading available." });
   if (ambulanceData.ecgLeadOff || !ambulanceData.ecgSamples?.length) findings.push({ metric: "ECG", value: null, reason: "ECG leads/samples are not currently suitable for review." });
-  const concerning = findings.some(f => f.value !== null && ((f.metric === "SpOâ‚‚" && f.value < 92) || (f.metric === "Heart rate" && (f.value < 50 || f.value > 120)) || (f.metric === "Temperature" && f.value >= 38.5)));
+  const concerning = findings.some(f => f.value !== null && ((f.metric === "SpO₂" && f.value < 92) || (f.metric === "Heart rate" && (f.value < 50 || f.value > 120)) || (f.metric === "Temperature" && f.value >= 38.5)));
   res.json({
     success: true,
     assessment: concerning ? "REVIEW_REQUIRED" : "NO_RULE_TRIGGERED",
@@ -2586,7 +2694,7 @@ app.get("/api/clinical/risk-assessment", (req, res) => {
 });
 
 // Hospital pre-arrival notification record and acknowledgement workflow.
-app.post("/api/hospital-notifications", (req, res) => {
+app.post("/api/hospital-notifications", requireAdmin, (req, res) => {
   const { emergencyId, hospitalId, hospitalName } = req.body || {};
   if (!emergencyId || !hospitalName) return res.status(400).json({ success: false, message: "Emergency ID and hospital name are required." });
   const notification = {
@@ -2604,8 +2712,8 @@ app.post("/api/hospital-notifications", (req, res) => {
   addEmergencyEvent("HOSPITAL_PRE_ARRIVAL_SENT", { notificationId: notification.notificationId, emergencyId: notification.emergencyId, hospitalName: notification.hospitalName });
   res.status(201).json({ success: true, notification, message: "Saved to ResQLink prototype hospital inbox; this does not send a real hospital message." });
 });
-app.get("/api/hospital-notifications", (req, res) => res.json({ success: true, notifications: hospitalNotifications }));
-app.post("/api/hospital-notifications/:id/acknowledge", (req, res) => {
+app.get("/api/hospital-notifications", requireAdmin, (req, res) => res.json({ success: true, notifications: hospitalNotifications }));
+app.post("/api/hospital-notifications/:id/acknowledge", requireAdmin, (req, res) => {
   const item = hospitalNotifications.find(n => n.notificationId === req.params.id);
   if (!item) return res.status(404).json({ success: false, message: "Notification not found." });
   item.status = "ACKNOWLEDGED"; item.acknowledgement = { staffName: String(req.body.staffName || "Demo receiving staff"), note: String(req.body.note || ""), acknowledgedAt: new Date().toISOString() };
@@ -2615,7 +2723,7 @@ app.post("/api/hospital-notifications/:id/acknowledge", (req, res) => {
 });
 
 // Patient transfer/handover with acknowledgement.
-app.post("/api/handovers", (req, res) => {
+app.post("/api/handovers", requireAdmin, (req, res) => {
   const { emergencyId, patientId, fromAmbulance, toAmbulance } = req.body || {};
   if (!emergencyId || !fromAmbulance || !toAmbulance || fromAmbulance === toAmbulance) return res.status(400).json({ success: false, message: "Emergency ID and two different ambulance IDs are required." });
   const handover = {
@@ -2630,8 +2738,8 @@ app.post("/api/handovers", (req, res) => {
   addEmergencyEvent("AMBULANCE_TRANSFER_INITIATED", { handoverId: handover.handoverId, emergencyId: handover.emergencyId, fromAmbulance, toAmbulance });
   res.status(201).json({ success: true, handover });
 });
-app.get("/api/handovers", (req, res) => res.json({ success: true, handovers: patientHandovers }));
-app.post("/api/handovers/:id/acknowledge", (req, res) => {
+app.get("/api/handovers", requireAdmin, (req, res) => res.json({ success: true, handovers: patientHandovers }));
+app.post("/api/handovers/:id/acknowledge", requireAdmin, (req, res) => {
   const item = patientHandovers.find(h => h.handoverId === req.params.id);
   if (!item) return res.status(404).json({ success: false, message: "Handover not found." });
   item.status = "ACKNOWLEDGED";
@@ -2643,7 +2751,7 @@ app.post("/api/handovers/:id/acknowledge", (req, res) => {
 });
 
 // Analytics are calculated from saved prototype events, not fabricated dashboard counters.
-app.get("/api/analytics/summary", (req, res) => {
+app.get("/api/analytics/summary", requireAdmin, (req, res) => {
   const completed = emergencyEvents.filter(e => e.type === "AMBULANCE_RESPONSE_RECORDED" && Number.isFinite(e.details?.responseMinutes));
   const avgResponseMinutes = completed.length ? Number((completed.reduce((sum, e) => sum + e.details.responseMinutes, 0) / completed.length).toFixed(1)) : null;
   const statusCounts = ambulances.reduce((acc, a) => { const key = String(a.status || "UNKNOWN").toUpperCase(); acc[key] = (acc[key] || 0) + 1; return acc; }, {});
@@ -2661,7 +2769,7 @@ app.get("/api/analytics/summary", (req, res) => {
     note: "Metrics reflect events recorded by this prototype. No response-time average is shown until response timestamps are recorded."
   });
 });
-app.post("/api/analytics/response-time", (req, res) => {
+app.post("/api/analytics/response-time", requireAdmin, (req, res) => {
   const minutes = Number(req.body?.responseMinutes);
   if (!Number.isFinite(minutes) || minutes < 0 || minutes > 1440) return res.status(400).json({ success: false, message: "Response time must be between 0 and 1440 minutes." });
   addEmergencyEvent("AMBULANCE_RESPONSE_RECORDED", { emergencyId: req.body.emergencyId || null, ambulanceId: req.body.ambulanceId || null, responseMinutes: minutes });
@@ -2732,7 +2840,7 @@ app.listen(
     );
 
     console.log(
-      "ðŸš‘ SMART AMBULANCE SERVER"
+      "🚑 SMART AMBULANCE SERVER"
     );
 
     console.log(
@@ -2746,7 +2854,7 @@ app.listen(
     console.log();
 
     console.log(
-      "ðŸš‘ Ambulances:"
+      "🚑 Ambulances:"
     );
 
 
@@ -2755,7 +2863,7 @@ app.listen(
 
         console.log(
 
-          `${ambulance.ambulanceId} â†’ ${ambulance.status} â†’ ${ambulance.latitude}, ${ambulance.longitude}`
+          `${ambulance.ambulanceId} → ${ambulance.status} → ${ambulance.latitude}, ${ambulance.longitude}`
 
         );
 
@@ -2766,7 +2874,7 @@ app.listen(
     console.log();
 
     console.log(
-      "ðŸ“¡ ESP32 endpoint:"
+      "📡 ESP32 endpoint:"
     );
 
     console.log(
@@ -2777,7 +2885,7 @@ app.listen(
     console.log();
 
     console.log(
-      "ðŸš¨ Public ambulance request:"
+      "🚨 Public ambulance request:"
     );
 
     console.log(
@@ -2788,7 +2896,7 @@ app.listen(
     console.log();
 
     console.log(
-      "ðŸš‘ All ambulances:"
+      "🚑 All ambulances:"
     );
 
     console.log(
@@ -2799,7 +2907,7 @@ app.listen(
     console.log();
 
     console.log(
-      "ðŸ¥ Best route:"
+      "🏥 Best route:"
     );
 
     console.log(
