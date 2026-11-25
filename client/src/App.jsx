@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import "./App.css";
 
 // Deployed ResQLink backend on Render.
 // For local development, set VITE_API_URL in client/.env.local if needed.
-const API_URL = import.meta.env.VITE_API_URL || "https://resqlink-m2ge.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "https://resqlink-backend-18mu.onrender.com";
 
 function buildEcgPath(samples) {
   if (!Array.isArray(samples) || samples.length < 2) return "";
@@ -89,7 +89,7 @@ function App() {
   const [patientSaveError, setPatientSaveError] = useState("");
   const [pendingRfidUid, setPendingRfidUid] = useState("");
 
-  // Modules 4–7 workflow dashboard
+  // Modules 4â€“7 workflow dashboard
   const [riskAssessment, setRiskAssessment] = useState(null);
   const [hospitalInbox, setHospitalInbox] = useState([]);
   const [handoverRecords, setHandoverRecords] = useState([]);
@@ -730,7 +730,7 @@ function App() {
       setAlert({
         type: "warning",
         message:
-          `✓ Best route selected: ${data.route.destination} — ${data.route.distance} km, ETA ${data.route.estimatedTime} min.`
+          `âœ“ Best route selected: ${data.route.destination} â€” ${data.route.distance} km, ETA ${data.route.estimatedTime} min.`
       });
 
     }
@@ -1027,8 +1027,8 @@ function App() {
       <div class="kpi"><strong>${analyticsSummary.totalEmergencyEvents}</strong><br/>Emergency-related events</div>
       <div class="kpi"><strong>${analyticsSummary.averageResponseMinutes ?? "Not available"}</strong><br/>Average response minutes</div>
       <div class="kpi"><strong>${analyticsSummary.responseSamples}</strong><br/>Recorded response samples</div></div>
-      <h2>Ambulance status</h2><p>${Object.entries(analyticsSummary.ambulanceStatusCounts || {}).map(([k,v]) => `${k}: ${v}`).join(" · ") || "No data"}</p>
-      <h2>Hospital notifications</h2><p>${Object.entries(analyticsSummary.hospitalNotificationCounts || {}).map(([k,v]) => `${k}: ${v}`).join(" · ") || "No data"}</p>
+      <h2>Ambulance status</h2><p>${Object.entries(analyticsSummary.ambulanceStatusCounts || {}).map(([k,v]) => `${k}: ${v}`).join(" Â· ") || "No data"}</p>
+      <h2>Hospital notifications</h2><p>${Object.entries(analyticsSummary.hospitalNotificationCounts || {}).map(([k,v]) => `${k}: ${v}`).join(" Â· ") || "No data"}</p>
       <h2>Emergency event history</h2><table><thead><tr><th>Event</th><th>Time</th><th>Details</th></tr></thead><tbody>${events || "<tr><td colspan='3'>No recorded events</td></tr>"}</tbody></table>
       <p class="note">Prototype analytics based on records currently stored by ResQLink. This report is not a certified EMS performance report. Missing response-time samples are not treated as zero.</p>
       <script>window.onload=()=>window.print();</script></body></html>`;
@@ -1108,7 +1108,7 @@ function App() {
       setAlert({
         type: "critical",
         message:
-          "🚑 Ambulance request accepted. The assigned ambulance is now en route."
+          "ðŸš‘ Ambulance request accepted. The assigned ambulance is now en route."
       });
 
     }
@@ -1188,7 +1188,7 @@ function App() {
         type: "critical",
 
         message:
-          "🚨 Ambulance emergency detected. Assistance request sent."
+          "ðŸš¨ Ambulance emergency detected. Assistance request sent."
 
       });
 
@@ -1625,7 +1625,7 @@ function App() {
         type: "warning",
 
         message:
-          "✓ Digital patient handover completed. Journey continuity maintained."
+          "âœ“ Digital patient handover completed. Journey continuity maintained."
 
       });
 
@@ -1696,26 +1696,26 @@ function App() {
 
   if (portal === "choose") return (
     <main className="portal-gateway"><section className="portal-gateway-card">
-      <h1>🚑 ResQLink</h1><p>Intelligent Ambulance System</p><h2>Select your portal</h2>
+      <h1>ðŸš‘ ResQLink</h1><p>Intelligent Ambulance System</p><h2>Select your portal</h2>
       <div className="portal-gateway-actions">
-        <button onClick={() => setPortal("user")}><span>🧑‍🦽</span><strong>User Portal</strong><small>Request an ambulance or scan RFID</small></button>
-        <button onClick={() => setPortal("admin")}><span>🛡️</span><strong>Admin Portal</strong><small>Manage requests and monitor the ambulance system</small></button>
+        <button onClick={() => setPortal("user")}><span>ðŸ§‘â€ðŸ¦½</span><strong>User Portal</strong><small>Request an ambulance or scan RFID</small></button>
+        <button onClick={() => setPortal("admin")}><span>ðŸ›¡ï¸</span><strong>Admin Portal</strong><small>Manage requests and monitor the ambulance system</small></button>
       </div>
     </section></main>
   );
 
   if (portal === "user") return (
     <main className="portal-gateway"><section className="user-portal-panel">
-      <button className="portal-back-button" onClick={() => setPortal("choose")}>← Back to portal selection</button>
-      <h1>🚑 ResQLink – User Portal</h1><p className="portal-subtitle">Choose one of the two available services.</p>
+      <button className="portal-back-button" onClick={() => setPortal("choose")}>â† Back to portal selection</button>
+      <h1>ðŸš‘ ResQLink â€“ User Portal</h1><p className="portal-subtitle">Choose one of the two available services.</p>
       <div className="user-service-grid">
-        <article className="user-service-card"><div className="service-icon">🚨</div><h2>Request Ambulance</h2>
+        <article className="user-service-card"><div className="service-icon">ðŸš¨</div><h2>Request Ambulance</h2>
           <p>Share your current location and send an emergency ambulance request.</p>
           <button disabled={requestingAmbulance} onClick={requestAmbulance}>{requestingAmbulance ? "Getting your location..." : "REQUEST AMBULANCE"}</button>
           {requestError && <p className="portal-feedback error">{requestError}</p>}
           {ambulanceRequest && <div className="portal-feedback success"><b>Request submitted</b><br/>Request ID: {ambulanceRequest.requestId}<br/>Status: {ambulanceRequest.status || "PENDING"}<br/>Waiting for the Admin Portal to accept or reject your request.</div>}
         </article>
-        <article className="user-service-card"><div className="service-icon">📡</div><h2>Scan RFID</h2>
+        <article className="user-service-card"><div className="service-icon">ðŸ“¡</div><h2>Scan RFID</h2>
           <p>Scan a registered patient card. The scan and patient details will appear in the Admin Portal.</p>
           <button onClick={async () => { setPortalRfidMessage("Waiting for RFID scan..."); await scanRFID(); }}>SCAN RFID CARD</button>
           {portalRfidMessage && <div className="portal-feedback">{portalRfidMessage}</div>}
@@ -1729,24 +1729,24 @@ function App() {
 
     <div className="app">
       <div className="admin-portal-bar">
-        <div><strong>🛡️ Admin Portal</strong><span>Incoming requests · RFID records · Live monitoring</span></div>
+        <div><strong>ðŸ›¡ï¸ Admin Portal</strong><span>Incoming requests Â· RFID records Â· Live monitoring</span></div>
         <button className="monitor-button" onClick={() => setPortal("choose")}>Exit Admin Portal</button>
       </div>
       <section className="admin-inbox-panel">
-        <div className="admin-inbox-heading"><div><h2>🚑 Ambulance Request Inbox</h2><p>Accept or reject ambulance requests submitted by users.</p></div><button className="monitor-button" onClick={fetchAdminPortalData}>↻ Refresh</button></div>
+        <div className="admin-inbox-heading"><div><h2>ðŸš‘ Ambulance Request Inbox</h2><p>Accept or reject ambulance requests submitted by users.</p></div><button className="monitor-button" onClick={fetchAdminPortalData}>â†» Refresh</button></div>
         {adminRequests.length === 0 ? <p className="admin-empty-state">No ambulance requests received yet.</p> :
           <div className="admin-inbox-list">{adminRequests.slice().reverse().map(item => <article className="admin-inbox-item" key={item.requestId}>
-            <div className="admin-request-info"><strong>{item.patientName || "Emergency Patient"}</strong><span>Request ID: {item.requestId}</span><span>Phone: {item.phone || "Not provided"} · Emergency: {item.emergencyType || "Emergency"}</span><span>Location: {Number(item.latitude).toFixed(5)}, {Number(item.longitude).toFixed(5)}</span><span>Ambulance: {item.ambulanceId || "Pending assignment"}</span><span>Requested: {item.requestedAt ? new Date(item.requestedAt).toLocaleString() : "—"}</span></div>
+            <div className="admin-request-info"><strong>{item.patientName || "Emergency Patient"}</strong><span>Request ID: {item.requestId}</span><span>Phone: {item.phone || "Not provided"} Â· Emergency: {item.emergencyType || "Emergency"}</span><span>Location: {Number(item.latitude).toFixed(5)}, {Number(item.longitude).toFixed(5)}</span><span>Ambulance: {item.ambulanceId || "Pending assignment"}</span><span>Requested: {item.requestedAt ? new Date(item.requestedAt).toLocaleString() : "â€”"}</span></div>
             <div className="admin-request-actions"><b className={`admin-status ${String(item.status || "PENDING").toLowerCase()}`}>{item.status || "PENDING"}</b>
-              {["PENDING","ASSIGNED"].includes(String(item.status).toUpperCase()) && <><button className="admin-accept-button" disabled={requestDecisionBusy===item.requestId} onClick={() => decideAmbulanceRequest(item.requestId,"accept")}>✓ Accept</button><button className="admin-reject-button" disabled={requestDecisionBusy===item.requestId} onClick={() => decideAmbulanceRequest(item.requestId,"reject")}>✕ Reject</button></>}
+              {["PENDING","ASSIGNED"].includes(String(item.status).toUpperCase()) && <><button className="admin-accept-button" disabled={requestDecisionBusy===item.requestId} onClick={() => decideAmbulanceRequest(item.requestId,"accept")}>âœ“ Accept</button><button className="admin-reject-button" disabled={requestDecisionBusy===item.requestId} onClick={() => decideAmbulanceRequest(item.requestId,"reject")}>âœ• Reject</button></>}
             </div>
           </article>)}</div>}
       </section>
       <section className="admin-inbox-panel admin-rfid-panel">
-        <div className="admin-inbox-heading"><div><h2>📡 User RFID Scan Records</h2><p>Patient details retrieved from RFID scans in the User Portal.</p></div></div>
+        <div className="admin-inbox-heading"><div><h2>ðŸ“¡ User RFID Scan Records</h2><p>Patient details retrieved from RFID scans in the User Portal.</p></div></div>
         {adminRfidScans.length===0 ? <p className="admin-empty-state">No RFID scans recorded yet.</p> :
           <div className="admin-rfid-list">{adminRfidScans.slice().reverse().map((scan,index)=><article className="admin-rfid-item" key={`${scan.scannedAt||index}-${scan.uid||"unknown"}`}>
-            <strong>{scan.patient?.name || "Unidentified RFID card"}</strong><span>Patient ID: {scan.patient?.id || "Not identified"}</span><span>RFID UID: {scan.uid || "Not received"}</span><span>Age: {scan.patient?.age ?? "—"} · Blood group: {scan.patient?.bloodGroup || "—"}</span><span>Phone: {scan.patient?.phone || "—"}</span><span>Allergies: {Array.isArray(scan.patient?.allergies) ? scan.patient.allergies.join(", ") : scan.patient?.allergies || "—"}</span><span>Medical history: {scan.patient?.medicalHistory || "—"}</span><span>Status: {scan.status} · {scan.scannedAt ? new Date(scan.scannedAt).toLocaleString() : ""}</span>
+            <strong>{scan.patient?.name || "Unidentified RFID card"}</strong><span>Patient ID: {scan.patient?.id || "Not identified"}</span><span>RFID UID: {scan.uid || "Not received"}</span><span>Age: {scan.patient?.age ?? "â€”"} Â· Blood group: {scan.patient?.bloodGroup || "â€”"}</span><span>Phone: {scan.patient?.phone || "â€”"}</span><span>Allergies: {Array.isArray(scan.patient?.allergies) ? scan.patient.allergies.join(", ") : scan.patient?.allergies || "â€”"}</span><span>Medical history: {scan.patient?.medicalHistory || "â€”"}</span><span>Status: {scan.status} Â· {scan.scannedAt ? new Date(scan.scannedAt).toLocaleString() : ""}</span>
           </article>)}</div>}
       </section>
 
@@ -1764,7 +1764,7 @@ function App() {
             fontWeight: "900",
             letterSpacing: "1px"
           }}>
-            🚑 ResQLink
+            ðŸš‘ ResQLink
           </h1>
 
           <p style={{
@@ -1800,8 +1800,8 @@ function App() {
           >
 
             {isMonitoring
-              ? "⏸ Stop Monitoring"
-              : "▶ Start Monitoring"}
+              ? "â¸ Stop Monitoring"
+              : "â–¶ Start Monitoring"}
 
           </button>
 
@@ -1810,7 +1810,7 @@ function App() {
             onClick={scanRFID}
           >
 
-            📡 Scan RFID
+            ðŸ“¡ Scan RFID
 
           </button>
 
@@ -1823,7 +1823,7 @@ function App() {
               }
             >
 
-              🚨 Simulate Emergency
+              ðŸš¨ Simulate Emergency
 
             </button>
 
@@ -1836,7 +1836,7 @@ function App() {
               }
             >
 
-              ↩ Reset Emergency
+              â†© Reset Emergency
 
             </button>
 
@@ -1874,7 +1874,7 @@ function App() {
               </label>
 
               <strong>
-                {patient.id || "—"}
+                {patient.id || "â€”"}
               </strong>
 
             </div>
@@ -1897,7 +1897,7 @@ function App() {
                 {rfidStatus ===
                 "IDENTIFIED"
 
-                  ? "✓ IDENTIFIED"
+                  ? "âœ“ IDENTIFIED"
 
                   : "NOT SCANNED"}
 
@@ -1996,7 +1996,7 @@ function App() {
             <p>RFID-linked patient profiles, medical history and emergency snapshots</p>
           </div>
           <div className="patient-record-actions">
-            <button type="button" className="monitor-button" onClick={startNewPatient}>＋ New Patient</button>
+            <button type="button" className="monitor-button" onClick={startNewPatient}>ï¼‹ New Patient</button>
             <button type="button" className="monitor-button" onClick={saveEmergencySnapshot} disabled={!patient.id}>Save Emergency Snapshot</button>
           </div>
         </div>
@@ -2006,7 +2006,7 @@ function App() {
 
         <div className="patient-record-layout">
           <form className="patient-record-form" onSubmit={savePatientRecord}>
-            <h3>{editingPatientId ? `Edit Patient · ${editingPatientId}` : "Register Patient"}</h3>
+            <h3>{editingPatientId ? `Edit Patient Â· ${editingPatientId}` : "Register Patient"}</h3>
             <div className="patient-rfid-tools">
               <div className={`patient-rfid-status ${rfidStatus === "IDENTIFIED" ? "is-linked" : rfidStatus === "UNKNOWN_CARD" ? "is-unknown" : "is-manual"}`}>
                 <strong>{rfidStatus === "IDENTIFIED" ? "RFID patient identified" : rfidStatus === "UNKNOWN_CARD" ? "New / unregistered RFID card" : "Manual registration available"}</strong>
@@ -2065,8 +2065,8 @@ function App() {
             <div className="patient-record-list">
               {patientRecords.filter(item => [item.id,item.name,item.bloodGroup].some(value => String(value || "").toLowerCase().includes(patientSearch.toLowerCase()))).map(item => (
                 <button type="button" className={`patient-record-item ${editingPatientId === item.id ? "selected" : ""}`} key={item.id} onClick={() => selectPatientRecord(item)}>
-                  <span><strong>{item.name}</strong><small>{item.id} · {item.age ?? "Age unknown"} yrs · {item.bloodGroup || "Blood group unknown"}</small></span>
-                  <span>View →</span>
+                  <span><strong>{item.name}</strong><small>{item.id} Â· {item.age ?? "Age unknown"} yrs Â· {item.bloodGroup || "Blood group unknown"}</small></span>
+                  <span>View â†’</span>
                 </button>
               ))}
               {!patientRecords.length && <p className="record-empty">No patient records yet.</p>}
@@ -2078,8 +2078,8 @@ function App() {
                   ? patient.emergencyRecords.slice().reverse().map(record => (
                     <div className="patient-history-item" key={record.emergencyId}>
                       <strong>{record.emergencyId}</strong>
-                      <small>{new Date(record.occurredAt).toLocaleString()} · {record.ambulanceId}</small>
-                      <small>HR: {record.vitals?.heartRate ?? "—"} · SpO₂: {record.vitals?.spo2 ?? "—"} · Temp: {record.vitals?.temperature ?? "—"}</small>
+                      <small>{new Date(record.occurredAt).toLocaleString()} Â· {record.ambulanceId}</small>
+                      <small>HR: {record.vitals?.heartRate ?? "â€”"} Â· SpOâ‚‚: {record.vitals?.spo2 ?? "â€”"} Â· Temp: {record.vitals?.temperature ?? "â€”"}</small>
                     </div>
                   ))
                   : <p className="record-empty">No saved emergency snapshots for this patient.</p>}
@@ -2098,7 +2098,7 @@ function App() {
         <div className="vital-card">
 
           <div className="icon">
-            ❤️
+            â¤ï¸
           </div>
 
           <h3>
@@ -2107,7 +2107,7 @@ function App() {
 
           <div className="value">
 
-            {vitalValidity.heartRate ? vitals.heartRate : "—"}
+            {vitalValidity.heartRate ? vitals.heartRate : "â€”"}
 
             <span>
               {vitalValidity.heartRate ? "BPM" : "NO READING"}
@@ -2135,16 +2135,16 @@ function App() {
         <div className="vital-card">
 
           <div className="icon">
-            🫁
+            ðŸ«
           </div>
 
           <h3>
-            SpO₂
+            SpOâ‚‚
           </h3>
 
           <div className="value">
 
-            {vitalValidity.spo2 ? vitals.spo2 : "—"}
+            {vitalValidity.spo2 ? vitals.spo2 : "â€”"}
 
             <span>
               {vitalValidity.spo2 ? "%" : "NO READING"}
@@ -2170,7 +2170,7 @@ function App() {
         <div className="vital-card">
 
           <div className="icon">
-            🌡️
+            ðŸŒ¡ï¸
           </div>
 
           <h3>
@@ -2179,10 +2179,10 @@ function App() {
 
           <div className="value">
 
-            {vitalValidity.temperature ? vitals.temperature.toFixed(1) : "—"}
+            {vitalValidity.temperature ? vitals.temperature.toFixed(1) : "â€”"}
 
             <span>
-              {vitalValidity.temperature ? "°C" : "NOT CONNECTED"}
+              {vitalValidity.temperature ? "Â°C" : "NOT CONNECTED"}
             </span>
 
           </div>
@@ -2207,12 +2207,12 @@ function App() {
           <div className="icon">
 
             {status === "CRITICAL"
-              ? "🔴"
+              ? "ðŸ”´"
               : status === "WARNING"
-              ? "🟡"
+              ? "ðŸŸ¡"
               : status === "NO DATA"
-              ? "⚪"
-              : "🟢"}
+              ? "âšª"
+              : "ðŸŸ¢"}
 
           </div>
 
@@ -2227,7 +2227,7 @@ function App() {
           <p>
 
             {status === "CRITICAL"
-              ? "Abnormal readings — check patient"
+              ? "Abnormal readings â€” check patient"
               : status === "WARNING"
               ? "Readings require attention"
               : status === "NO DATA"
@@ -2242,13 +2242,13 @@ function App() {
 
 
       {/* =================================================
-          ECG MONITOR — REAL AD8232 SIGNAL ONLY
+          ECG MONITOR â€” REAL AD8232 SIGNAL ONLY
       ================================================= */}
 
       <section className="panel ecg-panel">
         <div className="panel-title">
           <div>
-            <h2>💓 ECG Monitor</h2>
+            <h2>ðŸ’“ ECG Monitor</h2>
             <p className="ecg-subtitle">
               Live AD8232 signal from ESP32
             </p>
@@ -2271,12 +2271,12 @@ function App() {
             : "ECG waveform unavailable until electrode contact and fresh ESP32 samples are detected"}
         >
           <div className="ecg-grid" />
-          <span className="ecg-label">AD8232 • LIVE ADC</span>
+          <span className="ecg-label">AD8232 â€¢ LIVE ADC</span>
           <span className="ecg-preview-note">
             {ecgSignalReady
-              ? `${ecgTelemetry.samples.length} real samples · ${ecgTelemetry.sampleRate} Hz nominal · auto gain`
+              ? `${ecgTelemetry.samples.length} real samples Â· ${ecgTelemetry.sampleRate} Hz nominal Â· auto gain`
               : ecgTelemetry.leadOff
-                ? "Waveform hidden — electrode leads are disconnected"
+                ? "Waveform hidden â€” electrode leads are disconnected"
                 : "Waiting for fresh ECG samples from ESP32"}
           </span>
 
@@ -2332,7 +2332,7 @@ function App() {
         <div className="panel-title">
 
           <h2>
-            📈 Patient Condition Trend
+            ðŸ“ˆ Patient Condition Trend
           </h2>
 
           <span className="live">
@@ -2364,15 +2364,15 @@ function App() {
                 </th>
 
                 <th>
-                  ❤️ HR
+                  â¤ï¸ HR
                 </th>
 
                 <th>
-                  🫁 SpO₂
+                  ðŸ« SpOâ‚‚
                 </th>
 
                 <th>
-                  🌡️ Temp
+                  ðŸŒ¡ï¸ Temp
                 </th>
 
               </tr>
@@ -2401,7 +2401,7 @@ function App() {
                     </td>
 
                     <td>
-                      {item.temperature}°C
+                      {item.temperature}Â°C
                     </td>
 
                   </tr>
@@ -2431,7 +2431,7 @@ function App() {
         >
 
           <div className="alert-icon">
-            🚨
+            ðŸš¨
           </div>
 
           <div>
@@ -2479,7 +2479,7 @@ function App() {
             <div>
 
               <h2>
-                🚨 Inter-Ambulance
+                ðŸš¨ Inter-Ambulance
                 Emergency Assistance
               </h2>
 
@@ -2511,7 +2511,7 @@ function App() {
             <div className="emergency-location">
 
               <span className="big-icon">
-                📍
+                ðŸ“
               </span>
 
               <div>
@@ -2541,7 +2541,7 @@ function App() {
             <div className="patient-emergency">
 
               <span className="big-icon">
-                ❤️
+                â¤ï¸
               </span>
 
               <div>
@@ -2561,7 +2561,7 @@ function App() {
             <div className="assistance-ambulance">
 
               <span className="big-icon">
-                🚑
+                ðŸš‘
               </span>
 
               <div>
@@ -2594,7 +2594,7 @@ function App() {
                   }
                 >
 
-                  🚑 Accept Assistance
+                  ðŸš‘ Accept Assistance
 
                 </button>
 
@@ -2605,7 +2605,7 @@ function App() {
                   }
                 >
 
-                  ❌ Decline
+                  âŒ Decline
 
                 </button>
 
@@ -2615,7 +2615,7 @@ function App() {
 
               <div className="accepted-message">
 
-                ✓ Ambulance A-02
+                âœ“ Ambulance A-02
                 is responding
 
               </div>
@@ -2624,7 +2624,7 @@ function App() {
 
               <div className="declined-message">
 
-                ❌ Request declined —
+                âŒ Request declined â€”
                 searching for another ambulance
 
               </div>
@@ -2653,7 +2653,7 @@ function App() {
           <div className="panel-title">
 
             <h2>
-              📍 Ambulance Location
+              ðŸ“ Ambulance Location
             </h2>
 
             <span className="live">
@@ -2674,7 +2674,7 @@ function App() {
               />
             ) : (
               <div className="map-waiting">
-                <span>📡</span>
+                <span>ðŸ“¡</span>
                 <strong>Waiting for live NEO-6M GPS fix</strong>
                 <small>Real map will appear when the ESP32 reports valid coordinates.</small>
               </div>
@@ -2683,7 +2683,7 @@ function App() {
 
           <div className="coordinates">
 
-            📍 Latitude:
+            ðŸ“ Latitude:
             {" "}
             {gpsStatus.valid && Number.isFinite(location.latitude)
               ? location.latitude.toFixed(6)
@@ -2715,7 +2715,7 @@ function App() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Open real hospital route ↗
+                  Open real hospital route â†—
                 </a>
               </>
             )}
@@ -2733,7 +2733,7 @@ function App() {
           <div className="panel-title">
 
             <h2>
-              🏥 Intelligent Hospital
+              ðŸ¥ Intelligent Hospital
             </h2>
 
           </div>
@@ -2759,7 +2759,7 @@ function App() {
             </div>
 
             <div className="route-line">
-              ↓
+              â†“
             </div>
 
             <div className="location">
@@ -2807,7 +2807,7 @@ function App() {
                   ? `${bestRoute.distance} km`
                   : hospital.distance != null
                     ? `${hospital.distance} km`
-                    : "—"}
+                    : "â€”"}
 
               </strong>
 
@@ -2848,16 +2848,16 @@ function App() {
               <h3>Nearby real hospitals</h3>
               {nearbyHospitals.slice(0, 5).map(item => (
                 <div className="nearby-hospital-row" key={item.id}>
-                  <span>🏥</span>
+                  <span>ðŸ¥</span>
                   <div>
                     <strong>{item.name}</strong>
                     <small>
-                      {item.address || "Address not listed"} · {item.straightLineDistance} km straight-line
+                      {item.address || "Address not listed"} Â· {item.straightLineDistance} km straight-line
                     </small>
                   </div>
                 </div>
               ))}
-              <small className="osm-credit">Hospital listings © OpenStreetMap contributors</small>
+              <small className="osm-credit">Hospital listings Â© OpenStreetMap contributors</small>
             </div>
           )}
 
@@ -2866,7 +2866,7 @@ function App() {
             onClick={viewBestRoute}
           >
 
-            🗺️ View Best Route
+            ðŸ—ºï¸ View Best Route
 
           </button>
 
@@ -2894,7 +2894,7 @@ function App() {
                   color: "#166534"
                 }}
               >
-                ✅ BEST ROUTE SELECTED
+                âœ… BEST ROUTE SELECTED
               </h3>
 
               <div
@@ -2905,27 +2905,27 @@ function App() {
               >
 
                 <p>
-                  🏥 <strong>Hospital:</strong>{" "}
+                  ðŸ¥ <strong>Hospital:</strong>{" "}
                   {bestRoute.destination}
                 </p>
 
                 <p>
-                  📏 <strong>Distance:</strong>{" "}
+                  ðŸ“ <strong>Distance:</strong>{" "}
                   {bestRoute.distance} km
                 </p>
 
                 <p>
-                  ⏱️ <strong>Estimated Time:</strong>{" "}
+                  â±ï¸ <strong>Estimated Time:</strong>{" "}
                   {bestRoute.estimatedTime} min
                 </p>
 
                 <p>
-                  🚦 <strong>Traffic:</strong>{" "}
+                  ðŸš¦ <strong>Traffic:</strong>{" "}
                   {bestRoute.traffic}
                 </p>
 
                 <p>
-                  🛏️ <strong>Available Beds:</strong>{" "}
+                  ðŸ›ï¸ <strong>Available Beds:</strong>{" "}
                   {bestRoute.availableBeds}
                 </p>
 
@@ -2942,7 +2942,7 @@ function App() {
                   textAlign: "center"
                 }}
               >
-                🚑 Ambulance A-01 → {bestRoute.destination}
+                ðŸš‘ Ambulance A-01 â†’ {bestRoute.destination}
               </div>
 
             </div>
@@ -2961,7 +2961,7 @@ function App() {
           <div className="panel-title">
 
             <h2>
-              🔄 Dynamic Hospital Decision
+              ðŸ”„ Dynamic Hospital Decision
             </h2>
 
           </div>
@@ -2981,7 +2981,7 @@ function App() {
             }
           >
 
-            🔄 Re-evaluate Hospital
+            ðŸ”„ Re-evaluate Hospital
 
           </button>
 
@@ -3035,7 +3035,7 @@ function App() {
           <div className="panel-title">
 
             <h2>
-              🔄 Patient Handover Continuity
+              ðŸ”„ Patient Handover Continuity
             </h2>
 
           </div>
@@ -3054,9 +3054,9 @@ function App() {
                 fontSize: "35px"
               }}
             >
-              🚑 A-01
-              {" → "}
-              🚑 A-02
+              ðŸš‘ A-01
+              {" â†’ "}
+              ðŸš‘ A-02
             </div>
 
             <h3>
@@ -3090,7 +3090,7 @@ function App() {
               }
             >
 
-              🔄 Start Digital Handover
+              ðŸ”„ Start Digital Handover
 
             </button>
 
@@ -3113,8 +3113,8 @@ function App() {
 
                   <p key={index}>
 
-                    🚑 {item.from}
-                    {" → "}
+                    ðŸš‘ {item.from}
+                    {" â†’ "}
                     {item.to}
                     {" | "}
                     {item.patient}
@@ -3142,7 +3142,7 @@ function App() {
           <div className="panel-title">
 
             <h2>
-              🚨 Emergency Alerts
+              ðŸš¨ Emergency Alerts
             </h2>
 
             <span
@@ -3166,7 +3166,7 @@ function App() {
             <div className="active-alert">
 
               <div className="big-alert-icon">
-                🚨
+                ðŸš¨
               </div>
 
               <h3>
@@ -3199,7 +3199,7 @@ function App() {
             <div className="no-alert">
 
               <div>
-                ✓
+                âœ“
               </div>
 
               <h3>
@@ -3227,7 +3227,7 @@ function App() {
           <div className="panel-title">
 
             <h2>
-              🚑 Nearby Ambulances
+              ðŸš‘ Nearby Ambulances
             </h2>
 
           </div>
@@ -3245,7 +3245,7 @@ function App() {
             >
 
               <div className="ambulance-icon">
-                🚑
+                ðŸš‘
               </div>
 
               <div>
@@ -3286,7 +3286,7 @@ function App() {
             <div className="ambulance-item">
 
               <div className="ambulance-icon">
-                🚑
+                ðŸš‘
               </div>
 
               <div>
@@ -3315,20 +3315,20 @@ function App() {
 
 
       {/* =================================================
-          MODULE 2 — HOSPITAL MANAGEMENT
+          MODULE 2 â€” HOSPITAL MANAGEMENT
       ================================================= */}
       <section className="hospital-management-panel">
         <div className="hospital-management-heading">
           <div>
-            <span className="hospital-module-kicker">MODULE 2 · HYBRID HOSPITAL DIRECTORY</span>
-            <h2>🏥 Intelligent Hospital Management</h2>
+            <span className="hospital-module-kicker">MODULE 2 Â· HYBRID HOSPITAL DIRECTORY</span>
+            <h2>ðŸ¥ Intelligent Hospital Management</h2>
             <p>Real hospital listings and locations, with capacity details maintained by the ResQLink prototype administrator.</p>
           </div>
           <div className="hospital-management-actions">
             <button type="button" onClick={fetchHospitalDirectory} disabled={hospitalManagementLoading}>
-              {hospitalManagementLoading ? "Refreshing…" : "↻ Refresh hospitals"}
+              {hospitalManagementLoading ? "Refreshingâ€¦" : "â†» Refresh hospitals"}
             </button>
-            <button type="button" onClick={startManualHospital}>＋ Add hospital manually</button>
+            <button type="button" onClick={startManualHospital}>ï¼‹ Add hospital manually</button>
           </div>
         </div>
 
@@ -3339,18 +3339,18 @@ function App() {
               <p className="hospital-empty-state">{gpsStatus.valid ? "No hospitals returned yet. Refresh to try again." : "Waiting for a valid ambulance GPS fix to discover nearby hospitals. You can still add a hospital manually."}</p>
             ) : hospitalDirectory.map(item => (
               <button type="button" className={`hospital-directory-item ${selectedManagedHospitalId === item.id ? "selected" : ""}`} key={item.id} onClick={() => loadHospitalIntoForm(item)}>
-                <span className="hospital-directory-icon">🏥</span>
+                <span className="hospital-directory-icon">ðŸ¥</span>
                 <span className="hospital-directory-copy">
                   <strong>{item.name}</strong>
                   <small>{item.address || "Address not listed"}</small>
-                  <small>{item.straightLineDistance != null ? `${item.straightLineDistance} km straight-line` : "Location saved"} · {item.source === "OpenStreetMap" ? "OpenStreetMap" : "Manual entry"}</small>
-                  <small>ICU: {item.icuBedsAvailable ?? "—"}/{item.icuBedsTotal ?? "—"} · General: {item.generalBedsAvailable ?? "—"}/{item.generalBedsTotal ?? "—"}</small>
+                  <small>{item.straightLineDistance != null ? `${item.straightLineDistance} km straight-line` : "Location saved"} Â· {item.source === "OpenStreetMap" ? "OpenStreetMap" : "Manual entry"}</small>
+                  <small>ICU: {item.icuBedsAvailable ?? "â€”"}/{item.icuBedsTotal ?? "â€”"} Â· General: {item.generalBedsAvailable ?? "â€”"}/{item.generalBedsTotal ?? "â€”"}</small>
                   <small>{item.capacityUpdatedAt ? `Capacity updated: ${new Date(item.capacityUpdatedAt).toLocaleString()}` : "Capacity details not configured"}</small>
                 </span>
                 <span className={`hospital-acceptance ${item.ambulanceAcceptance === "ACCEPTING" ? "accepting" : item.ambulanceAcceptance === "NOT_ACCEPTING" ? "not-accepting" : "unknown"}`}>{item.ambulanceAcceptance === "ACCEPTING" ? "Accepting" : item.ambulanceAcceptance === "NOT_ACCEPTING" ? "Not accepting" : "Unconfirmed"}</span>
               </button>
             ))}
-            <small className="hospital-source-note">Hospital names and coordinates are discovered from OpenStreetMap. © OpenStreetMap contributors.</small>
+            <small className="hospital-source-note">Hospital names and coordinates are discovered from OpenStreetMap. Â© OpenStreetMap contributors.</small>
           </div>
 
           <form className="hospital-management-form" onSubmit={saveHospitalManagement}>
@@ -3373,28 +3373,28 @@ function App() {
             </div>
             <div className="hospital-form-footer">
               <small>{selectedManagedHospitalId ? `Selected record: ${selectedManagedHospitalId}` : addingManualHospital ? "New manual hospital record" : "Choose a hospital from the directory or add one manually."}</small>
-              <button type="submit" disabled={hospitalManagementSaving || (!selectedManagedHospitalId && !addingManualHospital)}>{hospitalManagementSaving ? "Saving…" : "Save hospital details"}</button>
+              <button type="submit" disabled={hospitalManagementSaving || (!selectedManagedHospitalId && !addingManualHospital)}>{hospitalManagementSaving ? "Savingâ€¦" : "Save hospital details"}</button>
             </div>
             {hospitalManagementMessage && <p className="hospital-management-message">{hospitalManagementMessage}</p>}
           </form>
         </div>
-        <div className="hospital-data-warning">ⓘ Capacity, facilities, emergency availability and acceptance are manually entered demonstration values. They are not connected to hospital live systems and must be verified before real-world decisions.</div>
+        <div className="hospital-data-warning">â“˜ Capacity, facilities, emergency availability and acceptance are manually entered demonstration values. They are not connected to hospital live systems and must be verified before real-world decisions.</div>
       </section>
 
       {/* =================================================
-          MODULES 4–7: ROUTING, PRE-ARRIVAL, RISK, HANDOVER, ANALYTICS
+          MODULES 4â€“7: ROUTING, PRE-ARRIVAL, RISK, HANDOVER, ANALYTICS
       ================================================= */}
       <section className="panel advanced-workflows-panel">
         <div className="advanced-title">
           <div><h2>ResQLink Emergency Coordination Centre</h2><p>Dynamic routing, hospital communication, patient risk review, handover and analytics</p></div>
-          <button type="button" className="monitor-button" onClick={loadAdvancedModules}>↻ Refresh modules</button>
+          <button type="button" className="monitor-button" onClick={loadAdvancedModules}>â†» Refresh modules</button>
         </div>
         {workflowMessage && <p className="record-success">{workflowMessage}</p>}
         {workflowError && <p className="record-error">{workflowError}</p>}
 
         <div className="advanced-module-grid">
           <article className="advanced-module-card">
-            <h3>04 · Hospital Pre-Arrival Notification</h3>
+            <h3>04 Â· Hospital Pre-Arrival Notification</h3>
             <p>Prepare a hospital notification with the emergency ID, patient details available in the prototype and valid current vital readings.</p>
             <form onSubmit={sendHospitalPreArrival} className="advanced-form">
               <label>Hospital name<input required value={preArrivalHospital} onChange={e => setPreArrivalHospital(e.target.value)} placeholder="Enter selected hospital" /></label>
@@ -3404,7 +3404,7 @@ function App() {
             <small className="prototype-note">Prototype inbox only. This does not send an actual message to a hospital.</small>
             <div className="workflow-record-list">
               {(hospitalInbox || []).slice(0,5).map(item => <div className="workflow-record" key={item.notificationId}>
-                <strong>{item.hospitalName}</strong><small>{item.emergencyId} · {item.status}</small>
+                <strong>{item.hospitalName}</strong><small>{item.emergencyId} Â· {item.status}</small>
                 {item.status !== "ACKNOWLEDGED" && <button type="button" onClick={() => acknowledgeHospitalNotification(item.notificationId)}>Acknowledge (demo)</button>}
               </div>)}
               {!hospitalInbox?.length && <small>No pre-arrival notifications recorded yet.</small>}
@@ -3412,7 +3412,7 @@ function App() {
           </article>
 
           <article className="advanced-module-card">
-            <h3>05 · AI-Assisted Patient Risk Assessment</h3>
+            <h3>05 Â· AI-Assisted Patient Risk Assessment</h3>
             <p>Explainable prototype rules review only valid sensor readings and identify missing or unsuitable signals.</p>
             <button type="button" onClick={async () => {
               try { const r = await fetch(`${API_URL}/api/clinical/risk-assessment`); const d = await r.json(); if (!r.ok) throw new Error(d.message); setRiskAssessment(d.assessment); }
@@ -3426,7 +3426,7 @@ function App() {
           </article>
 
           <article className="advanced-module-card">
-            <h3>06 · Patient Handover and Ambulance Transfer</h3>
+            <h3>06 Â· Patient Handover and Ambulance Transfer</h3>
             <p>Transfer the emergency identity, patient summary, available vital snapshot and recent ECG samples to a receiving ambulance.</p>
             <form onSubmit={createPatientHandover} className="advanced-form">
               <label>Emergency ID<input value={handoverEmergencyId} onChange={e => setHandoverEmergencyId(e.target.value)} placeholder="Uses current request if blank" /></label>
@@ -3438,7 +3438,7 @@ function App() {
             </form>
             <div className="workflow-record-list">
               {(handoverRecords || []).slice(0,5).map(item => <div className="workflow-record" key={item.handoverId}>
-                <strong>{item.handoverId} · {item.fromAmbulance} → {item.toAmbulance}</strong><small>{item.emergencyId} · {item.status}</small>
+                <strong>{item.handoverId} Â· {item.fromAmbulance} â†’ {item.toAmbulance}</strong><small>{item.emergencyId} Â· {item.status}</small>
                 {item.status !== "ACKNOWLEDGED" && <button type="button" onClick={() => acknowledgeHandover(item.handoverId)}>Receiving crew acknowledge</button>}
               </div>)}
               {!handoverRecords?.length && <small>No patient transfers recorded yet.</small>}
@@ -3446,19 +3446,19 @@ function App() {
           </article>
 
           <article className="advanced-module-card">
-            <h3>07 · Analytics and Emergency Reports</h3>
+            <h3>07 Â· Analytics and Emergency Reports</h3>
             <p>Summary is calculated from recorded prototype events. Missing response-time samples are shown as unavailable, not zero.</p>
             <button type="button" onClick={loadAdvancedModules}>Refresh analytics</button>
             {analyticsSummary && <>
               <div className="analytics-kpis">
                 <div><strong>{analyticsSummary.totalEmergencyEvents}</strong><small>Emergency-related events</small></div>
-                <div><strong>{analyticsSummary.averageResponseMinutes ?? "—"}</strong><small>Average response (minutes)</small></div>
+                <div><strong>{analyticsSummary.averageResponseMinutes ?? "â€”"}</strong><small>Average response (minutes)</small></div>
                 <div><strong>{analyticsSummary.responseSamples}</strong><small>Recorded response samples</small></div>
               </div>
               <h4>Ambulance status counts</h4>
-              <p>{Object.entries(analyticsSummary.ambulanceStatusCounts || {}).map(([k,v]) => `${k}: ${v}`).join(" · ") || "No fleet data"}</p>
+              <p>{Object.entries(analyticsSummary.ambulanceStatusCounts || {}).map(([k,v]) => `${k}: ${v}`).join(" Â· ") || "No fleet data"}</p>
               <h4>Hospital notifications</h4>
-              <p>{Object.entries(analyticsSummary.hospitalNotificationCounts || {}).map(([k,v]) => `${k}: ${v}`).join(" · ") || "No hospital notifications yet"}</p>
+              <p>{Object.entries(analyticsSummary.hospitalNotificationCounts || {}).map(([k,v]) => `${k}: ${v}`).join(" Â· ") || "No hospital notifications yet"}</p>
               <div className="patient-record-actions">
                 <button type="button" onClick={downloadAnalyticsCsv}>Download analytics CSV</button>
                 <button type="button" onClick={printAnalyticsReport}>Print / Save PDF report</button>
@@ -3473,7 +3473,7 @@ function App() {
           </article>
 
           <article className="advanced-module-card route-module-card">
-            <h3>03 · Dynamic Route and Traffic Management</h3>
+            <h3>03 Â· Dynamic Route and Traffic Management</h3>
             <p>Use the existing GPS-based road-route service and hospital selection. Alternative routes require live route-provider responses; traffic congestion is not currently available from the existing backend.</p>
             <button type="button" onClick={fetchNearestHospital}>Refresh hospital route recommendation</button>
             <small className="prototype-note">Route distance and ETA depend on a valid GPS fix and the routing service. No live traffic claim is made.</small>
@@ -3488,7 +3488,7 @@ function App() {
       <footer>
 
         <span>
-          ResQLink • Intelligent Ambulance IoT System
+          ResQLink â€¢ Intelligent Ambulance IoT System
         </span>
 
         <span>
